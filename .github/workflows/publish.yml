@@ -45,6 +45,6 @@ jobs:
           push: true
           platforms: linux/amd64
           provenance: false
-          tags: ghcr.io/${{ github.repository_owner }}/ncs:${{ matrix.sdk }}SDK
+          tags: ghcr.io/${{ github.repository_owner }}/ncs:${{ matrix.sdk }}sdk
           build-args: |
             NCS_SDK_VERSION=${{ matrix.sdk }}
