@@ -9,13 +9,18 @@ RUN \
   ca-certificates \
   python3 \
   python3-pip \
+  python3-venv \
   git \
   wget \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-# Install west
-RUN pip3 install west
+# Create and use a virtual environment
+RUN python3 -m venv /opt/west_env \
+  && /opt/west_env/bin/pip install west
+
+# Add the virtual environment to PATH
+ENV PATH="/opt/west_env/bin:$PATH"
 
 # NCS SDK installation
 RUN \
