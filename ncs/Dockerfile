@@ -22,6 +22,9 @@ RUN \
 RUN python3 -m venv /opt/west_env \
   && /opt/west_env/bin/pip install west
 
+# Install Zephyr Python dependencies
+RUN /opt/west_env/bin/pip install -r https://raw.githubusercontent.com/zephyrproject-rtos/zephyr/main/scripts/requirements.txt
+
 # Add the virtual environment to PATH
 ENV PATH="/opt/west_env/bin:$PATH"
 
