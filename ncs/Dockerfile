@@ -12,6 +12,7 @@ RUN \
   python3-venv \
   git \
   wget \
+  ccache \  # Install ccache
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
