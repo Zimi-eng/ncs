@@ -12,6 +12,8 @@ RUN \
   python3-venv \
   git \
   wget \
+  cmake \
+  ninja-build \
   ccache \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
