@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \cmake ninja-build gperf \
     ccache dfu-util device-tree-compiler wget \
     python3-dev python3-pip python3-setuptools python3-tk python3-wheel python3-venv xz-utils file \
-    make gcc gcc-multilib g++-multilib libsdl2-dev libmagic1
+    make gcc gcc-multilib g++-multilib libsdl2-dev libmagic1 unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 # tell cmake where to find the Zephyr SDK cmake packages
 ENV CMAKE_PREFIX_PATH /opt/toolchains
@@ -16,7 +17,7 @@ ENV CMAKE_PREFIX_PATH /opt/toolchains
 # create a Python virtual environment and install Python packages
 RUN python3 -m venv /venv \
   && . /venv/bin/activate \
-  && pip3 install west
+  && pip3 install --no-cache-dir west
 
 # retrieve a lighter version of the Zephyr workspace, which is enough to
 # populate a cache for use when building. we'll need to re-generate this image
@@ -30,30 +31,23 @@ RUN . /venv/bin/activate \
 
 # install the Zephyr toolchain only for arm-zephyr-eabi
 ENV ZEPHYR_SDK_VERSION=0.16.8
-# RUN wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz \
-#   && mkdir -p /opt/toolchains \
-#   && tar xf zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz -C /opt/toolchains \
-#   && /opt/toolchains/zephyr-sdk-${ZEPHYR_SDK_VERSION}/setup.sh -c -t arm-zephyr-eabi \
-#   && rm zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz
-
-RUN wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz \
+RUN wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz \
   && mkdir -p /opt/toolchains \
-  && tar xf zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz -C /opt/toolchains \
+  && tar xf zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz -C /opt/toolchains \
   && /opt/toolchains/zephyr-sdk-${ZEPHYR_SDK_VERSION}/setup.sh -c -t arm-zephyr-eabi \
-  && rm zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz
+  && rm zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz
 
 RUN \
     mkdir ${HOME}/gn \
     && cd ${HOME}/gn \
     && wget -O gn.zip https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/latest \
-    && apt install -y unzip \
     && unzip gn.zip \
     && rm gn.zip \
     && echo 'export PATH=${HOME}/gn:"$PATH"' >> ${HOME}/.bashrc \
     && . ${HOME}/.bashrc
 
 RUN . /venv/bin/activate \
-    && pip3 install -r ~/ncs/${NCS_SDK_VERSION}/modules/lib/matter/scripts/setup/requirements.nrfconnect.txt
+    && pip3 install --no-cache-dir -r ~/ncs/${NCS_SDK_VERSION}/modules/lib/matter/scripts/setup/requirements.nrfconnect.txt
 
 RUN cd ~/ncs/${NCS_SDK_VERSION}/nrf \
     && mkdir zimi \
