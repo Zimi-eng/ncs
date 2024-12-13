@@ -1,48 +1,64 @@
-FROM debian:stable-slim
+FROM ubuntu:22.04
 
-ARG NCS_SDK_VERSION=v2.5.0
+# set noninteractive installation
+ENV DEBIAN_FRONTEND=noninteractive \
+    NCS_SDK_VERSION=v2.7.0
 
-# OS dependencies and packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \cmake ninja-build gperf \
+    ccache dfu-util device-tree-compiler wget \
+    python3-dev python3-pip python3-setuptools python3-tk python3-wheel python3-venv xz-utils file \
+    make gcc gcc-multilib g++-multilib libsdl2-dev libmagic1
+
+# tell cmake where to find the Zephyr SDK cmake packages
+ENV CMAKE_PREFIX_PATH /opt/toolchains
+
+# create a Python virtual environment and install Python packages
+RUN python3 -m venv /venv \
+  && . /venv/bin/activate \
+  && pip3 install west
+
+# retrieve a lighter version of the Zephyr workspace, which is enough to
+# populate a cache for use when building. we'll need to re-generate this image
+# if the manifest changes, to keep the benefit.
+RUN . /venv/bin/activate \
+    && west init -m https://github.com/nrfconnect/sdk-nrf --mr ${NCS_SDK_VERSION} ~/ncs/${NCS_SDK_VERSION} \
+    && cd ~/ncs/${NCS_SDK_VERSION} \
+    && west update \
+    && west zephyr-export \
+    && pip install --no-cache-dir -r zephyr/scripts/requirements.txt
+
+# install the Zephyr toolchain only for arm-zephyr-eabi
+ENV ZEPHYR_SDK_VERSION=0.16.8
+# RUN wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz \
+#   && mkdir -p /opt/toolchains \
+#   && tar xf zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz -C /opt/toolchains \
+#   && /opt/toolchains/zephyr-sdk-${ZEPHYR_SDK_VERSION}/setup.sh -c -t arm-zephyr-eabi \
+#   && rm zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz
+
+RUN wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz \
+  && mkdir -p /opt/toolchains \
+  && tar xf zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz -C /opt/toolchains \
+  && /opt/toolchains/zephyr-sdk-${ZEPHYR_SDK_VERSION}/setup.sh -c -t arm-zephyr-eabi \
+  && rm zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz
+
 RUN \
-  apt-get -y update \
-  && apt-get -y install --no-install-recommends \
-  ca-certificates \
-  python3 \
-  python3-pip \
-  python3-venv \
-  git \
-  wget \
-  cmake \
-  ninja-build \
-  ccache \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+    mkdir ${HOME}/gn \
+    && cd ${HOME}/gn \
+    && wget -O gn.zip https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/latest \
+    && apt install -y unzip \
+    && unzip gn.zip \
+    && rm gn.zip \
+    && echo 'export PATH=${HOME}/gn:"$PATH"' >> ${HOME}/.bashrc \
+    && . ${HOME}/.bashrc
 
-# Create and use a virtual environment
-RUN python3 -m venv /opt/west_env \
-  && /opt/west_env/bin/pip install west
+RUN . /venv/bin/activate \
+    && pip3 install -r ~/ncs/${NCS_SDK_VERSION}/modules/lib/matter/scripts/setup/requirements.nrfconnect.txt
 
-# Install Zephyr Python dependencies
-RUN /opt/west_env/bin/pip install -r https://raw.githubusercontent.com/zephyrproject-rtos/zephyr/main/scripts/requirements.txt
+RUN cd ~/ncs/${NCS_SDK_VERSION}/nrf \
+    && mkdir zimi \
+    && cd zimi
 
-# Add the virtual environment to PATH
-ENV PATH="/opt/west_env/bin:$PATH"
+WORKDIR /root/ncs/${NCS_SDK_VERSION}/nrf/zimi
 
-# NCS SDK installation
-RUN \
-  wget https://developer.nordicsemi.com/.pc-tools/nrfutil/x64-linux/nrfutil \
-  && chmod +x nrfutil \
-  && mv nrfutil /usr/bin \
-  && nrfutil install toolchain-manager \
-  && nrfutil toolchain-manager install --ncs-version ${NCS_SDK_VERSION} \
-  && apt-get remove -y --purge \
-  wget \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/* \
-  && rm -rf ncs/downloads
-
-# Environment setup
-ENV ZEPHYR_BASE=/opt/ncs/nrf/zephyr
-ENV PATH=$ZEPHYR_BASE/scripts:$PATH
-
-WORKDIR /workspace
+CMD ["/bin/bash", "-c", "source /root/ncs/${NCS_SDK_VERSION}/zephyr/zephyr-env.sh && source /venv/bin/activate && exec bash"]
