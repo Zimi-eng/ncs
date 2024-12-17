@@ -43,8 +43,7 @@ RUN \
     && wget -O gn.zip https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/latest \
     && unzip gn.zip \
     && rm gn.zip \
-    && echo 'export PATH=${HOME}/gn:"$PATH"' >> ${HOME}/.bashrc \
-    && . ${HOME}/.bashrc
+    && ln -s ${HOME}/gn/gn /usr/local/bin/gn
 
 RUN . /venv/bin/activate \
     && pip3 install --no-cache-dir -r ~/ncs/${NCS_SDK_VERSION}/modules/lib/matter/scripts/setup/requirements.nrfconnect.txt
